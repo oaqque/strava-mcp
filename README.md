@@ -2,6 +2,9 @@
 
 `strava-mcp` is a standalone MCP server for read-only personal Strava inspection.
 
+This project has no explicit affiliation with Strava and is not an official Strava
+MCP server. It is provided for development purposes only.
+
 It includes:
 
 - a thin MCP surface in `src/strava_mcp/server.py`
@@ -14,6 +17,10 @@ Local auth state is stored in:
 - `vault/strava/session.json` for the personal session
 
 Those files are intentionally ignored by git.
+
+## Licensing
+
+This project is licensed under the MIT License. See [`LICENSE`](LICENSE).
 
 ## Setup
 
