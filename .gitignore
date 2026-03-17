@@ -1,0 +1,7 @@
+.pytest_cache/
+.venv/
+__pycache__/
+*.pyc
+
+/vault/strava/*.json
+/vault/strava/.session.lock
