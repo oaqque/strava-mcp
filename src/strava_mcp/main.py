@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 import argparse
-import os
 import shlex
 import webbrowser
 from pathlib import Path
@@ -16,12 +15,12 @@ from rich.panel import Panel
 from rich.prompt import IntPrompt, Prompt
 from rich.syntax import Syntax
 
+from strava_mcp.runtime import build_service, resolve_storage_root
 from strava_mcp.server import create_server
 from strava_mcp.strava import (
     DEFAULT_PERSONAL_DATA_SCOPES,
     DEFAULT_STRAVA_ROOT,
     StravaAppCredentials,
-    StravaAuthStorage,
     StravaService,
 )
 
@@ -131,14 +130,14 @@ def run_server(args: argparse.Namespace) -> int:
     server = create_server(
         host=args.host,
         port=args.port,
-        service_factory=lambda: _build_service(args),
+        service_factory=lambda: build_service(args.root),
     )
     server.run(transport=args.transport)
     return 0
 
 
 def run_authorize_start(args: argparse.Namespace) -> int:
-    service = _build_service(args)
+    service = build_service(args.root)
     _ensure_app_credentials(service)
     auth_request = service.prepare_authorization(
         scopes=_resolve_scopes(args.scopes),
@@ -177,7 +176,7 @@ def run_authorize_start(args: argparse.Namespace) -> int:
 
 
 def run_authorize_complete(args: argparse.Namespace) -> int:
-    service = _build_service(args)
+    service = build_service(args.root)
     _ensure_app_credentials(service)
     console = _console()
     auth_request = service.prepare_authorization(
@@ -218,19 +217,6 @@ def main(argv: list[str] | None = None) -> int:
     return args.func(args)
 
 
-def _build_service(args: argparse.Namespace) -> StravaService:
-    return StravaService(storage=StravaAuthStorage(_resolve_storage_root(args.root)))
-
-
-def _resolve_storage_root(cli_root: Path | None) -> Path:
-    if cli_root is not None:
-        return cli_root.expanduser()
-    env_root = os.getenv("STRAVA_MCP_ROOT")
-    if env_root:
-        return Path(env_root).expanduser()
-    return DEFAULT_STRAVA_ROOT
-
-
 def _resolve_scopes(raw_scopes: list[str] | None) -> tuple[str, ...]:
     scopes = raw_scopes or list(DEFAULT_PERSONAL_DATA_SCOPES)
     normalized_scopes = tuple(dict.fromkeys(scope.strip() for scope in scopes if scope))
@@ -240,7 +226,17 @@ def _resolve_scopes(raw_scopes: list[str] | None) -> tuple[str, ...]:
 
 
 def _build_complete_command(state: str, scopes: tuple[str, ...]) -> str:
-    parts = ["uv", "run", "strava-mcp", "authorize", "complete", "--state", state]
+    parts = [
+        "uv",
+        "run",
+        "strava-mcp",
+        "--root",
+        str(resolve_storage_root(None)),
+        "authorize",
+        "complete",
+        "--state",
+        state,
+    ]
     for scope in scopes:
         parts.extend(["--scope", scope])
     return " ".join(shlex.quote(part) for part in parts)

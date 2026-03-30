@@ -13,6 +13,7 @@ dependencies = [
 
 [project.scripts]
 strava-mcp = "strava_mcp.main:main"
+strava = "strava_mcp.cli.main:main"
 
 [build-system]
 requires = ["hatchling"]

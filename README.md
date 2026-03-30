@@ -102,6 +102,25 @@ To serve with a specific auth root:
 uv run strava-mcp --root /absolute/path/to/strava-state serve
 ```
 
+## Direct API CLI
+
+The package also exposes a direct Strava API CLI that does not start the MCP
+server:
+
+```bash
+uv run strava list
+uv run strava profile
+uv run strava show <activity-id>
+uv run strava streams <activity-id> --keys heartrate watts
+```
+
+Use `--json` for raw JSON output and `--root` to point at a specific auth state
+directory:
+
+```bash
+uv run strava --root /absolute/path/to/strava-state --json list --per-page 5
+```
+
 Optional transports:
 
 ```bash
