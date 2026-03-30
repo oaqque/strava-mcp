@@ -17,6 +17,7 @@ from strava_mcp.strava import (
 class _FakeStorage:
     def __init__(self) -> None:
         self.app_path = Path("vault/strava/app.json")
+        self.session_path = Path("vault/strava/session.json")
         self.credentials: StravaAppCredentials | None = StravaAppCredentials(
             client_id=12345,
             client_secret="top-secret",
@@ -93,7 +94,7 @@ class _FakeStravaService:
 
 def test_authorize_start_prints_follow_up_complete_command(monkeypatch, capsys):
     service = _FakeStravaService()
-    monkeypatch.setattr(strava_main, "StravaService", lambda: service)
+    monkeypatch.setattr(strava_main, "_build_service", lambda args: service)
     monkeypatch.setattr(strava_main.webbrowser, "open", lambda url: True)
 
     exit_code = strava_main.main(["authorize", "start", "--launch-browser"])
@@ -115,7 +116,7 @@ def test_authorize_complete_accepts_callback_url_and_persists_session(
     monkeypatch, capsys
 ):
     service = _FakeStravaService()
-    monkeypatch.setattr(strava_main, "StravaService", lambda: service)
+    monkeypatch.setattr(strava_main, "_build_service", lambda args: service)
 
     exit_code = strava_main.main(
         [
@@ -151,7 +152,7 @@ def test_authorize_complete_accepts_callback_url_and_persists_session(
 def test_authorize_start_bootstraps_app_credentials_when_missing(monkeypatch, capsys):
     service = _FakeStravaService()
     service.storage.credentials = None
-    monkeypatch.setattr(strava_main, "StravaService", lambda: service)
+    monkeypatch.setattr(strava_main, "_build_service", lambda args: service)
     monkeypatch.setattr(strava_main.IntPrompt, "ask", lambda prompt: 67890)
     monkeypatch.setattr(
         strava_main.Prompt,
@@ -195,7 +196,7 @@ def test_authorize_start_reprompts_until_redirect_uri_is_a_full_url(
             "http://127.0.0.1:8765/exchange_token",
         ]
     )
-    monkeypatch.setattr(strava_main, "StravaService", lambda: service)
+    monkeypatch.setattr(strava_main, "_build_service", lambda args: service)
     monkeypatch.setattr(strava_main.IntPrompt, "ask", lambda prompt: 67890)
     monkeypatch.setattr(
         strava_main.Prompt,
@@ -215,3 +216,19 @@ def test_authorize_start_reprompts_until_redirect_uri_is_a_full_url(
             redirect_uri="http://127.0.0.1:8765/exchange_token",
         )
     ]
+
+
+def test_resolve_storage_root_prefers_cli_arg_over_env(monkeypatch):
+    monkeypatch.setenv("STRAVA_MCP_ROOT", "/tmp/from-env")
+
+    resolved = strava_main._resolve_storage_root(Path("/tmp/from-cli"))
+
+    assert resolved == Path("/tmp/from-cli")
+
+
+def test_resolve_storage_root_uses_env_when_cli_arg_absent(monkeypatch):
+    monkeypatch.setenv("STRAVA_MCP_ROOT", "/tmp/from-env")
+
+    resolved = strava_main._resolve_storage_root(None)
+
+    assert resolved == Path("/tmp/from-env")

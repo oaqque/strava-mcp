@@ -18,6 +18,11 @@ Local auth state is stored in:
 
 Those files are intentionally ignored by git.
 
+Override the auth storage root with either:
+
+- `--root /path/to/strava-state`
+- `STRAVA_MCP_ROOT=/path/to/strava-state`
+
 ## Licensing
 
 This project is licensed under the MIT License. See [`LICENSE`](LICENSE).
@@ -53,6 +58,12 @@ Configure Strava app credentials in `vault/strava/app.json`:
 If `vault/strava/app.json` is missing, `uv run strava-mcp authorize start` will
 prompt for these values and create the file for you.
 
+To store auth outside the repo default:
+
+```bash
+uv run strava-mcp --root /absolute/path/to/strava-state authorize start
+```
+
 ## One-Time Authorization
 
 Generate the authorization URL:
@@ -83,6 +94,12 @@ For direct local use:
 
 ```bash
 uv run strava-mcp serve
+```
+
+To serve with a specific auth root:
+
+```bash
+uv run strava-mcp --root /absolute/path/to/strava-state serve
 ```
 
 Optional transports:

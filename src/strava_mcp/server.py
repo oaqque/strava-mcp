@@ -69,7 +69,7 @@ def create_server(
         name="strava",
         instructions=(
             "Read-only Strava athlete and activity inspection using the local "
-            "vault/strava auth state managed by strava_mcp.strava."
+            "Strava auth state managed by strava_mcp.strava."
         ),
         host=host,
         port=port,

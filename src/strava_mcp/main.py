@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 import shlex
 import webbrowser
 from pathlib import Path
@@ -20,6 +21,7 @@ from strava_mcp.strava import (
     DEFAULT_PERSONAL_DATA_SCOPES,
     DEFAULT_STRAVA_ROOT,
     StravaAppCredentials,
+    StravaAuthStorage,
     StravaService,
 )
 
@@ -32,6 +34,15 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="strava-mcp",
         description="Strava MCP server backed by the shared Strava integration layer",
+    )
+    parser.add_argument(
+        "--root",
+        type=Path,
+        default=None,
+        help=(
+            "Directory that stores Strava auth state. Defaults to STRAVA_MCP_ROOT "
+            f"or {DEFAULT_STRAVA_ROOT}."
+        ),
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
 
@@ -117,13 +128,17 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def run_server(args: argparse.Namespace) -> int:
-    server = create_server(host=args.host, port=args.port)
+    server = create_server(
+        host=args.host,
+        port=args.port,
+        service_factory=lambda: _build_service(args),
+    )
     server.run(transport=args.transport)
     return 0
 
 
 def run_authorize_start(args: argparse.Namespace) -> int:
-    service = StravaService()
+    service = _build_service(args)
     _ensure_app_credentials(service)
     auth_request = service.prepare_authorization(
         scopes=_resolve_scopes(args.scopes),
@@ -162,7 +177,7 @@ def run_authorize_start(args: argparse.Namespace) -> int:
 
 
 def run_authorize_complete(args: argparse.Namespace) -> int:
-    service = StravaService()
+    service = _build_service(args)
     _ensure_app_credentials(service)
     console = _console()
     auth_request = service.prepare_authorization(
@@ -181,7 +196,7 @@ def run_authorize_complete(args: argparse.Namespace) -> int:
         callback_url=callback_url,
     )
 
-    session_path = Path(DEFAULT_STRAVA_ROOT) / "session.json"
+    session_path = service.storage.session_path
     console.print(
         Panel.fit(
             (
@@ -201,6 +216,19 @@ def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
     return args.func(args)
+
+
+def _build_service(args: argparse.Namespace) -> StravaService:
+    return StravaService(storage=StravaAuthStorage(_resolve_storage_root(args.root)))
+
+
+def _resolve_storage_root(cli_root: Path | None) -> Path:
+    if cli_root is not None:
+        return cli_root.expanduser()
+    env_root = os.getenv("STRAVA_MCP_ROOT")
+    if env_root:
+        return Path(env_root).expanduser()
+    return DEFAULT_STRAVA_ROOT
 
 
 def _resolve_scopes(raw_scopes: list[str] | None) -> tuple[str, ...]:
